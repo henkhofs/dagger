@@ -1,12 +1,7 @@
 #!/usr/bin/env nu
 # A module demonstrating @check functions in Nushell SDK
 
-use nushell-sdk/runtime/runtime/dag/core.nu *
-use nushell-sdk/runtime/runtime/dag/wrappers.nu *
-use nushell-sdk/runtime/runtime/dag/container.nu *
-use nushell-sdk/runtime/runtime/dag/directory.nu *
-use nushell-sdk/runtime/runtime/dag/file.nu *
-use nushell-sdk/runtime/runtime/dag/host.nu *
+use /usr/local/lib/dag.nu *
 
 # @check
 # A passing check - returns container that exits 0
