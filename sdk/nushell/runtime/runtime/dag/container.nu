@@ -315,7 +315,7 @@ export def "container directory" [
     let container = $in
     let query = $"query { loadContainerFromID\(id: \"($container.id)\"\) { directory\(path: \"($path)\"\) { id } } }"
     let result = dagger-query $query
-    {id: $result.loadContainerFromID.directory.id} {id: $result.loadContainerFromID.directory.id, __type: "Directory"}
+    {id: $result.loadContainerFromID.directory.id, __type: "Directory"}
 }
 
 # Get a file from a container

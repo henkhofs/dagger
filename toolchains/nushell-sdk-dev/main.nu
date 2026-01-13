@@ -3,20 +3,13 @@
 #
 # Provides CI/CD functions for testing, linting, and code generation
 
+# Import Dagger API
+use /usr/local/lib/dag.nu *
+
 # Get the SDK source directory
 def get-source []: nothing -> record {
-    host directory ".." --exclude=[
-        "**/node_modules"
-        "**/.venv"
-        "**/__pycache__"
-        "**/target"
-        "**/dist"
-        "**/.git"
-        "**/dagger.gen.go"
-        "**/internal/dagger/**"
-        "**/internal/querybuilder/**"
-        "**/internal/telemetry/**"
-    ]
+    # Get just the Nushell SDK directory
+    host directory "../../sdk/nushell"
 }
 
 # Get a container with Nushell and tools
