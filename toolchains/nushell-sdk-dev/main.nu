@@ -6,12 +6,24 @@
 # Import Dagger API
 use /usr/local/lib/dag.nu *
 
+# Ensure a record has __type metadata (workaround for parameters not having __type)
+def ensure-type [obj: record, type_name: string]: nothing -> record {
+    if ("__type" in $obj) {
+        $obj
+    } else {
+        $obj | insert __type $type_name
+    }
+}
+
 # Get the SDK source directory from workspace
 def get-source [
-    workspace: record  # The workspace directory containing the SDK
+    workspace: record  # @dagger(Directory) The workspace directory containing the SDK
 ]: nothing -> record {
+    # Ensure workspace has __type metadata
+    let ws = (ensure-type $workspace "Directory")
+    
     # Get the SDK directory from workspace
-    $workspace | get-directory "sdk/nushell"
+    $ws | get-directory "sdk/nushell"
 }
 
 # Get a container with Nushell and tools
@@ -25,7 +37,7 @@ def get-base []: nothing -> record {
 # @check
 # Run Nushell SDK tests
 export def test [
-    --workspace: record  # The workspace directory (default: host directory)
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "." } else { $workspace }
     let source = (get-source $ws)
@@ -40,7 +52,7 @@ export def test [
 # @check  
 # Run Nushell SDK check examples
 export def check-examples [
-    --workspace: record  # The workspace directory (default: host directory)
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
     let examples = ($ws | get-directory "core/integration/testdata/checks/hello-with-checks-nu")
@@ -55,8 +67,8 @@ export def check-examples [
 
 # Verify code generation is up to date
 export def verify-codegen [
-    introspection_json: record
-    --workspace: record  # The workspace directory (default: host directory)
+    introspection_json: record  # @dagger(File) The introspection JSON file
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
     let source = (get-source $ws)
@@ -72,8 +84,8 @@ export def verify-codegen [
 
 # Generate Nushell SDK code from introspection
 export def generate [
-    introspection_json: record
-    --workspace: record  # The workspace directory (default: host directory)
+    introspection_json: record  # @dagger(File) The introspection JSON file
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
     let source = (get-source $ws)
@@ -90,7 +102,7 @@ export def generate [
 # @check
 # Verify README examples are valid
 export def check-readme [
-    --workspace: record  # The workspace directory (default: host directory)
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
     let sdk_dir = ($ws | get-directory "sdk/nushell")
@@ -105,9 +117,9 @@ export def check-readme [
 # @check
 # Verify documentation exists
 export def check-docs [
-    --workspace: record  # The workspace directory (default: host directory)
+    workspace: record  # @dagger(Directory) The workspace directory
 ]: nothing -> record {
-    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let ws = (ensure-type $workspace "Directory")
     let docs = ($ws | get-directory "sdk/nushell/docs")
     
     # Check that all required docs exist
@@ -124,7 +136,7 @@ export def check-docs [
 # @check
 # Verify runtime structure is correct
 export def check-structure [
-    --workspace: record  # The workspace directory (default: host directory)
+    --workspace: record  # @dagger(Directory) The workspace directory (default: host directory)
 ]: nothing -> record {
     let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
     let runtime = ($ws | get-directory "sdk/nushell/runtime")
