@@ -23,9 +23,8 @@ After initialization, your `main.nu` will contain two example functions:
 export def container-echo [
     string_arg: string
 ] {
-    dag container
-    | container from "alpine:latest"
-    | container with-exec ["echo", $string_arg]
+    container from "alpine:latest"
+    | with-exec ["echo", $string_arg]
 }
 
 # Returns lines that match a pattern in files
@@ -33,12 +32,11 @@ export def grep-dir [
     directory_arg: Directory
     pattern: string
 ] {
-    dag container
-    | container from "alpine:latest"
-    | container with-mounted-directory "/mnt" $directory_arg
-    | container with-workdir "/mnt"
-    | container with-exec ["grep", "-R", $pattern, "."]
-    | container stdout
+    container from "alpine:latest"
+    | with-mounted-directory "/mnt" $directory_arg
+    | with-workdir "/mnt"
+    | with-exec ["grep", "-R", $pattern, "."]
+    | stdout
 }
 ```
 
@@ -109,15 +107,13 @@ A check function should return a container that exits 0 on pass and non-zero on 
 Access the Dagger API through the `dag` command and pipe through operations:
 
 ```nushell
-# Create a container
-dag container | container from "alpine:latest"
+container from "alpine:latest"
+```
 
-# Chain operations
-dag container
-| container from "node:20"
-| container with-exec ["npm", "install"]
-| container with-exec ["npm", "test"]
-| container stdout
+```nushell
+container from "alpine:latest"
+| with-exec ["echo", "hello"]
+| stdout
 ```
 
 ### Common Patterns
@@ -126,12 +122,11 @@ dag container
 
 ```nushell
 export def build [] {
-    dag container
-    | container from "golang:1.21"
-    | container with-workdir "/src"
-    | container with-directory "/src" (dag host directory ".")
-    | container with-exec ["go", "build", "-o", "app"]
-    | container file "/src/app"
+    container from "golang:1.21"
+    | with-workdir "/src"
+    | with-directory "/src" (host directory ".")
+    | with-exec ["go", "build", "-o", "app"]
+    | get-file "/src/app"
 }
 ```
 
@@ -141,29 +136,12 @@ export def build [] {
 export def package [
     source: Directory
 ] {
-    dag container
-    | container from "node:20"
-    | container with-directory "/app" $source
-    | container with-workdir "/app"
-    | container with-exec ["npm", "ci"]
-    | container with-exec ["npm", "run", "build"]
-    | container directory "/app/dist"
-}
-```
-
-#### Run tests
-
-```nushell
-export def test [
-    source: Directory
-] {
-    dag container
-    | container from "python:3.11"
-    | container with-directory "/app" $source
-    | container with-workdir "/app"
-    | container with-exec ["pip", "install", "-r", "requirements.txt"]
-    | container with-exec ["pytest"]
-    | container stdout
+    container from "node:20"
+    | with-directory "/app" $source
+    | with-workdir "/app"
+    | with-exec ["npm", "ci"]
+    | with-exec ["npm", "run", "build"]
+    | get-directory "/app/dist"
 }
 ```
 
