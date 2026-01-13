@@ -26,7 +26,6 @@ def assert-truthy [value: any, message: string] {
 # === __TYPE METADATA TESTS ===
 
 # @check
-# @check
 export def "test-type-metadata-present" []: nothing -> string {
     # Test that container from returns __type
     let container = (container from "alpine")
