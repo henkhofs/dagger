@@ -1,0 +1,14 @@
+{
+  "name": "nushell-sdk-dev",
+  "engineVersion": "v0.19.9",
+  "sdk": {
+    "source": "../../sdk/nushell/runtime"
+  },
+  "source": ".",
+  "dependencies": [
+    {
+      "name": "dagger-engine",
+      "source": "../engine-dev"
+    }
+  ]
+}
