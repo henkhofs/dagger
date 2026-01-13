@@ -6,10 +6,12 @@
 # Import Dagger API
 use /usr/local/lib/dag.nu *
 
-# Get the SDK source directory
-def get-source []: nothing -> record {
-    # Get just the Nushell SDK directory
-    host directory "../../sdk/nushell"
+# Get the SDK source directory from workspace
+def get-source [
+    workspace: record  # The workspace directory containing the SDK
+]: nothing -> record {
+    # Get the SDK directory from workspace
+    $workspace | get-directory "sdk/nushell"
 }
 
 # Get a container with Nushell and tools
@@ -22,24 +24,30 @@ def get-base []: nothing -> record {
 
 # @check
 # Run Nushell SDK tests
-export def test []: nothing -> record {
-    let source = (get-source)
+export def test [
+    --workspace: record  # The workspace directory (default: host directory)
+]: nothing -> record {
+    let ws = if ($workspace | is-empty) { host directory "." } else { $workspace }
+    let source = (get-source $ws)
     let base = (get-base)
     
     $base
     | with-directory "/sdk" $source
-    | with-workdir "/sdk/nushell/tests"
+    | with-workdir "/sdk/tests"
     | with-exec ["nu", "run.nu"]
 }
 
 # @check  
 # Run Nushell SDK check examples
-export def check-examples []: nothing -> record {
-    let source = (get-source)
+export def check-examples [
+    --workspace: record  # The workspace directory (default: host directory)
+]: nothing -> record {
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let examples = ($ws | get-directory "core/integration/testdata/checks/hello-with-checks-nu")
     
     # Test the hello-with-checks-nu example
     container from "alpine:3.19"
-    | with-directory "/app" $source
+    | with-directory "/app" $examples
     | with-workdir "/app"
     | with-exec ["sh", "-c", "apk add --no-cache curl && curl -fsSL https://github.com/nushell/nushell/releases/download/0.99.1/nu-0.99.1-x86_64-unknown-linux-musl.tar.gz | tar -xz -C /usr/local/bin --strip-components=1 nu-0.99.1-x86_64-unknown-linux-musl/nu"]
     | with-exec ["/usr/local/bin/nu", "--version"]
@@ -48,11 +56,13 @@ export def check-examples []: nothing -> record {
 # Verify code generation is up to date
 export def verify-codegen [
     introspection_json: record
+    --workspace: record  # The workspace directory (default: host directory)
 ]: nothing -> record {
-    let source = (get-source)
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let source = (get-source $ws)
     
     # Generate fresh code
-    let generated = (generate $introspection_json)
+    let generated = (generate $introspection_json --workspace $ws)
     
     # Compare with existing
     # For now, just return success - full implementation would diff files
@@ -63,57 +73,68 @@ export def verify-codegen [
 # Generate Nushell SDK code from introspection
 export def generate [
     introspection_json: record
+    --workspace: record  # The workspace directory (default: host directory)
 ]: nothing -> record {
-    let source = (get-source)
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let source = (get-source $ws)
     
     # Run codegen using the Go runtime
     container from "golang:1.21-alpine"
     | with-directory "/sdk" $source
-    | with-workdir "/sdk/nushell/runtime"
+    | with-workdir "/sdk/runtime"
     | with-mounted-file "/schema.json" $introspection_json
     | with-exec ["go", "run", ".", "codegen", "--introspection", "/schema.json"]
-    | get-directory "/sdk/nushell/runtime/runtime"
+    | get-directory "/sdk/runtime/runtime"
 }
 
 # @check
 # Verify README examples are valid
-export def check-readme []: nothing -> record {
-    let source = (get-source)
+export def check-readme [
+    --workspace: record  # The workspace directory (default: host directory)
+]: nothing -> record {
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let sdk_dir = ($ws | get-directory "sdk/nushell")
     
-    # Basic check that README exists and has content
+    # Check that README exists and has content
     container from "alpine:3.19"
-    | with-directory "/sdk" $source
-    | with-exec ["test", "-f", "/sdk/nushell/README.md"]
-    | with-exec ["sh", "-c", "wc -l /sdk/nushell/README.md | grep -E '[0-9]+'"]
+    | with-directory "/sdk" $sdk_dir
+    | with-exec ["test", "-f", "/sdk/README.md"]
+    | with-exec ["sh", "-c", "wc -l /sdk/README.md | grep -E '[0-9]+'"]
 }
 
 # @check
 # Verify documentation exists
-export def check-docs []: nothing -> record {
-    let source = (get-source)
+export def check-docs [
+    --workspace: record  # The workspace directory (default: host directory)
+]: nothing -> record {
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let docs = ($ws | get-directory "sdk/nushell/docs")
     
     # Check that all required docs exist
     container from "alpine:3.19"
-    | with-directory "/sdk" $source
-    | with-exec ["test", "-f", "/sdk/nushell/docs/installation.md"]
-    | with-exec ["test", "-f", "/sdk/nushell/docs/quickstart.md"]
-    | with-exec ["test", "-f", "/sdk/nushell/docs/reference.md"]
-    | with-exec ["test", "-f", "/sdk/nushell/docs/examples.md"]
-    | with-exec ["test", "-f", "/sdk/nushell/docs/architecture.md"]
-    | with-exec ["test", "-f", "/sdk/nushell/docs/testing.md"]
+    | with-directory "/docs" $docs
+    | with-exec ["test", "-f", "/docs/installation.md"]
+    | with-exec ["test", "-f", "/docs/quickstart.md"]
+    | with-exec ["test", "-f", "/docs/reference.md"]
+    | with-exec ["test", "-f", "/docs/examples.md"]
+    | with-exec ["test", "-f", "/docs/architecture.md"]
+    | with-exec ["test", "-f", "/docs/testing.md"]
 }
 
 # @check
 # Verify runtime structure is correct
-export def check-structure []: nothing -> record {
-    let source = (get-source)
+export def check-structure [
+    --workspace: record  # The workspace directory (default: host directory)
+]: nothing -> record {
+    let ws = if ($workspace | is-empty) { host directory "../.." } else { $workspace }
+    let runtime = ($ws | get-directory "sdk/nushell/runtime")
     
     container from "alpine:3.19"
-    | with-directory "/sdk" $source
-    | with-exec ["test", "-f", "/sdk/nushell/runtime/dagger.json"]
-    | with-exec ["test", "-f", "/sdk/nushell/runtime/main.go"]
-    | with-exec ["test", "-d", "/sdk/nushell/runtime/runtime/dag"]
-    | with-exec ["test", "-f", "/sdk/nushell/runtime/runtime/dag.nu"]
-    | with-exec ["test", "-f", "/sdk/nushell/runtime/runtime/dag/core.nu"]
-    | with-exec ["test", "-f", "/sdk/nushell/runtime/runtime/dag/wrappers.nu"]
+    | with-directory "/runtime" $runtime
+    | with-exec ["test", "-f", "/runtime/dagger.json"]
+    | with-exec ["test", "-f", "/runtime/main.go"]
+    | with-exec ["test", "-d", "/runtime/runtime/dag"]
+    | with-exec ["test", "-f", "/runtime/runtime/dag.nu"]
+    | with-exec ["test", "-f", "/runtime/runtime/dag/core.nu"]
+    | with-exec ["test", "-f", "/runtime/runtime/dag/wrappers.nu"]
 }
